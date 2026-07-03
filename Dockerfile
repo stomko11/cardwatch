@@ -16,7 +16,7 @@ EXPOSE 8099
 
 ENV CONFIG_PATH=/app/config/config.yaml
 
-LABEL net.unraid.docker.icon="https://raw.githubusercontent.com/stomko11/oscam-monitor/main/icon.png"
+LABEL net.unraid.docker.icon="https://raw.githubusercontent.com/stomko11/cardwatch/main/icon.png"
 LABEL net.unraid.docker.webui="http://[IP]:[PORT:8099]/"
 
 CMD ["python", "-m", "oscam_monitor.main"]

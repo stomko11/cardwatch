@@ -1,0 +1,30 @@
+<Container version="2">
+  <Name>cardwatch</Name>
+  <Repository>ghcr.io/stomko11/cardwatch:latest</Repository>
+  <Registry>https://ghcr.io/stomko11/cardwatch</Registry>
+  <Network>bridge</Network>
+  <Shell>bash</Shell>
+  <Privileged>false</Privileged>
+  <Icon>https://raw.githubusercontent.com/stomko11/cardwatch/main/icon.png</Icon>
+  <WebUI>http://[IP]:[PORT:8099]</WebUI>
+  <Overview>CardWatch is a self-hosted monitoring dashboard for OScam servers. Connects to OScam WebIF API to track active clients, build channel mappings (CAID:SID), collect viewing statistics, and manage reader/card status. Features live view, auto-mapping from Enigma2 receivers, file sync (srvid2/services), and SK/CZ tagging.</Overview>
+  <Project>https://github.com/stomko11/cardwatch</Project>
+  <TemplateURL>https://raw.githubusercontent.com/stomko11/cardwatch/main/templates/cardwatch.xml</TemplateURL>
+  <ReadMe>https://raw.githubusercontent.com/stomko11/cardwatch/main/README.md</ReadMe>
+  <Category>Tools: Other:</Category>
+  <ExtraSearchTerms>oscam satellite card sharing monitor dvb caid sid channel mapping stats cardwatch</ExtraSearchTerms>
+  <Changes>
+## v0.1.0
+- Initial release
+- Live view, channel mapping, viewing stats
+- File sync (oscam.srvid2, oscam.services)
+- Auto-mapping from Enigma2 receivers
+  </Changes>
+  <Date>2026-07-03</Date>
+  <MinVer>6.1</MinVer>
+  <License>MIT</License>
+  <Config Name="WebUI Port" Target="8099" Default="8099" Mode="tcp" Description="Port for the CardWatch web interface." Type="Port" Display="always" Required="true" Mask="false"/>
+  <Config Name="Config" Target="/app/config" Default="/mnt/user/appdata/cardwatch/config" Mode="rw" Description="Configuration directory (config.yaml)." Type="Path" Display="always" Required="true" Mask="false"/>
+  <Config Name="Data" Target="/app/data" Default="/mnt/user/appdata/cardwatch/data" Mode="rw" Description="Persistent data storage (SQLite database)." Type="Path" Display="always" Required="true" Mask="false"/>
+  <Config Name="CONFIG_PATH" Target="CONFIG_PATH" Default="/app/config/config.yaml" Description="Path to config YAML file inside the container." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+</Container>

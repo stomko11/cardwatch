@@ -1,8 +1,8 @@
-# 📡 OScam Monitor
+# 📡 CardWatch
 
-[![Docker Hub](https://img.shields.io/docker/pulls/stomko11/oscam-monitor?label=Docker%20Hub)](https://hub.docker.com/r/stomko11/oscam-monitor)
-[![GitHub Container Registry](https://img.shields.io/badge/ghcr.io-stomko11%2Foscam--monitor-blue)](https://ghcr.io/stomko11/oscam-monitor)
-[![GitHub release](https://img.shields.io/github/v/tag/stomko11/oscam-monitor?label=version)](https://github.com/stomko11/oscam-monitor/releases)
+[![Docker Hub](https://img.shields.io/docker/pulls/stomko11/cardwatch?label=Docker%20Hub)](https://hub.docker.com/r/stomko11/cardwatch)
+[![GitHub Container Registry](https://img.shields.io/badge/ghcr.io-stomko11%2Fcardwatch-blue)](https://ghcr.io/stomko11/cardwatch)
+[![GitHub release](https://img.shields.io/github/v/tag/stomko11/cardwatch?label=version)](https://github.com/stomko11/cardwatch/releases)
 
 A self-hosted monitoring dashboard for OScam servers. Connects to OScam WebIF API to track active clients, build channel mappings, collect viewing statistics, and manage reader/card status — all from a single Docker container.
 
@@ -21,20 +21,20 @@ A self-hosted monitoring dashboard for OScam servers. Connects to OScam WebIF AP
 ### Unraid
 
 1. In Unraid, go to **Docker → Template Repositories**
-2. Add: `https://github.com/stomko11/oscam-monitor`
-3. Click **Add Container**, select the **OScam Monitor** template
+2. Add: `https://github.com/stomko11/cardwatch`
+3. Click **Add Container**, select the **CardWatch** template
 4. Configure your OScam server details in the config file
 5. Click **Apply** — done!
 
-Data is stored in `/mnt/user/appdata/oscam-monitor` by default.
+Data is stored in `/mnt/user/appdata/cardwatch` by default.
 
 ### Docker Compose
 
 ```yaml
 services:
-  oscam-monitor:
-    image: stomko11/oscam-monitor:latest
-    container_name: oscam-monitor
+  cardwatch:
+    image: stomko11/cardwatch:latest
+    container_name: cardwatch
     ports:
       - "8099:8099"
     volumes:
@@ -53,8 +53,8 @@ Open http://localhost:8099
 
 ### Alternative registries
 
-- Docker Hub: `stomko11/oscam-monitor:latest`
-- GitHub Container Registry: `ghcr.io/stomko11/oscam-monitor:latest`
+- Docker Hub: `stomko11/cardwatch:latest`
+- GitHub Container Registry: `ghcr.io/stomko11/cardwatch:latest`
 
 ## Configuration
 

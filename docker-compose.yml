@@ -1,14 +1,12 @@
 services:
-  oscam-monitor:
+  cardwatch:
     build: .
-    container_name: oscam-monitor
+    container_name: cardwatch
     ports:
       - "8099:8099"
     volumes:
       - ./data:/app/data
       - ./config:/app/config
-      # Mount OScam log directory - adjust path to your setup
-      # - /path/to/oscam/logs:/oscam-logs:ro
     environment:
       - CONFIG_PATH=/app/config/config.yaml
     restart: unless-stopped
