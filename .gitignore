@@ -1,0 +1,27 @@
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Data
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# Config with secrets
+config/config.yaml
+config/channels.csv
+
+# Environment
+.env
+.env.*
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db

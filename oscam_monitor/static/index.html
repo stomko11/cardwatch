@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OScam Monitor</title>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.49.0/dist/apexcharts.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+        .header {
+            background: #16213e;
+            padding: 1rem 2rem;
+            border-bottom: 1px solid #0f3460;
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+        }
+        .header h1 { color: #00d4aa; font-size: 1.4rem; }
+        .nav { display: flex; gap: 0.5rem; }
+        .nav button {
+            background: transparent;
+            border: 1px solid #0f3460;
+            color: #a0a0a0;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+        .nav button:hover { border-color: #00d4aa; color: #00d4aa; }
+        .nav button.active { background: #0f3460; border-color: #00d4aa; color: #00d4aa; }
+
+        .container { max-width: 1400px; margin: 0 auto; padding: 1.5rem; }
+
+        .section { display: none; }
+        .section.active { display: block; }
+
+        .card {
+            background: #16213e;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            border: 1px solid #0f3460;
+        }
+        .card h2 { color: #00d4aa; margin-bottom: 1rem; font-size: 1.1rem; }
+        .card h3 { color: #a0d0c0; margin-bottom: 0.5rem; font-size: 0.95rem; }
+
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        th, td { padding: 0.6rem 0.8rem; text-align: left; border-bottom: 1px solid #0f3460; }
+        th { color: #00d4aa; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; }
+        tr:hover td { background: #1a2a4e; }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .badge-sk { background: #1e3a5f; color: #4fc3f7; }
+        .badge-cz { background: #3e1a1a; color: #ef5350; }
+        .badge-shared { background: #2e3a1a; color: #aed581; }
+        .badge-unknown { background: #2a2a2a; color: #888; }
+        .badge-live { background: #1a3e1a; color: #66bb6a; animation: pulse 2s infinite; }
+
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+
+        .stat-box {
+            background: #1a2a4e;
+            border-radius: 6px;
+            padding: 1rem;
+            text-align: center;
+        }
+        .stat-box .value { font-size: 2rem; font-weight: 700; color: #00d4aa; }
+        .stat-box .label { font-size: 0.8rem; color: #888; margin-top: 0.3rem; }
+
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; margin-bottom: 0.3rem; font-size: 0.85rem; color: #a0a0a0; }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 0.5rem;
+            background: #1a1a2e;
+            border: 1px solid #0f3460;
+            color: #e0e0e0;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        .form-group input:focus { border-color: #00d4aa; outline: none; }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+        .btn-primary { background: #00d4aa; color: #1a1a2e; font-weight: 600; }
+        .btn-primary:hover { background: #00b894; }
+        .btn-danger { background: #e74c3c; color: white; }
+        .btn-danger:hover { background: #c0392b; }
+        .btn-sm { padding: 0.3rem 0.6rem; font-size: 0.75rem; }
+
+        .empty { text-align: center; color: #666; padding: 2rem; font-style: italic; }
+        .refresh-info { font-size: 0.75rem; color: #666; text-align: right; margin-bottom: 0.5rem; }
+
+        .user-select {
+            display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1rem;
+        }
+        .user-select select { width: auto; min-width: 200px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📡 OScam Monitor</h1>
+        <div class="nav">
+            <button class="active" onclick="showSection('live')">Live</button>
+            <button onclick="showSection('readers')">Readers</button>
+            <button onclick="showSection('stats')">Stats</button>
+            <button onclick="showSection('mappings')">Mappings</button>
+            <button onclick="showSection('settings')">Settings</button>
+            <button onclick="showSection('logs')">Logs</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- LIVE SECTION -->
+        <div id="section-live" class="section active">
+            <div class="card">
+                <h2><span class="badge badge-live">●</span> Live Activity</h2>
+                <div class="refresh-info">Auto-refreshes every 10s</div>
+                <table id="live-table">
+                    <thead>
+                        <tr><th>User</th><th>Channel</th><th>CAID:SID</th><th>Provider</th><th>ECM</th><th>Server</th></tr>
+                    </thead>
+                    <tbody id="live-body"></tbody>
+                </table>
+                <div id="live-empty" class="empty">No active viewers</div>
+            </div>
+        </div>
+
+        <!-- READERS SECTION -->
+        <div id="section-readers" class="section">
+            <div class="card">
+                <h2>📇 Readers</h2>
+                <div class="refresh-info">Auto-refreshes every 60s</div>
+                <div id="readers-content"></div>
+                <div id="readers-empty" class="empty">No readers found — configure OScam server in Settings</div>
+            </div>
+            <div class="card" id="entitlements-card" style="display: none;">
+                <h2>Entitlements <span id="ent-reader-name"></span></h2>
+                <table>
+                    <thead><tr><th>CAID</th><th>Provider ID</th><th>Expiry</th></tr></thead>
+                    <tbody id="entitlements-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- STATS SECTION -->
+        <div id="section-stats" class="section">
+            <div class="grid">
+                <div class="stat-box"><div class="value" id="stat-total-hours">-</div><div class="label">Total Hours (30d)</div></div>
+                <div class="stat-box"><div class="value" id="stat-users">-</div><div class="label">Active Users</div></div>
+                <div class="stat-box"><div class="value" id="stat-channels">-</div><div class="label">Channels Seen</div></div>
+                <div class="stat-box"><div class="value" id="stat-card-hours" style="font-size:1.1rem;">-</div><div class="label">Card Busy Hours (30d)</div></div>
+            </div>
+
+            <div class="grid-2" style="margin-top: 1rem;">
+                <div class="card">
+                    <h2>Top Channels</h2>
+                    <table>
+                        <thead><tr><th>Channel</th><th>Hours</th><th>Users</th></tr></thead>
+                        <tbody id="top-channels-body"></tbody>
+                    </table>
+                </div>
+                <div class="card">
+                    <h2>User Leaderboard</h2>
+                    <table>
+                        <thead><tr><th>User</th><th>Hours</th><th>Sessions</th></tr></thead>
+                        <tbody id="user-leaderboard-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card" style="margin-top: 1rem;">
+                <h2>Daily Activity</h2>
+                <div id="chart-daily" style="height: 250px;"></div>
+            </div>
+
+            <div class="card" style="margin-top: 1rem;">
+                <h2>Card Busy Hours / Day</h2>
+                <div id="chart-card-busy" style="height: 250px;"></div>
+            </div>
+
+            <div class="card" style="margin-top: 1rem;">
+                <h2>Unique Users / Card / Day</h2>
+                <div id="chart-card-users" style="height: 250px;"></div>
+            </div>
+
+            <div class="card" style="margin-top: 1rem;">
+                <h2>Unique Channels / Card / Day</h2>
+                <div id="chart-card-channels" style="height: 250px;"></div>
+            </div>
+
+            <div class="card" style="margin-top: 1rem;">
+                <h2>User Stats</h2>
+                <div class="user-select">
+                    <label>Select user:</label>
+                    <select id="user-stats-select" onchange="loadUserStats()">
+                        <option value="">-- select --</option>
+                    </select>
+                </div>
+                <div id="user-stats-content"></div>
+            </div>
+        </div>
+
+        <!-- MAPPINGS SECTION -->
+        <div id="section-mappings" class="section">
+            <div class="card">
+                <h2>Channel Mappings</h2>
+                <p style="font-size:0.8rem;color:#888;margin-bottom:0.8rem;">
+                    SID→channel name mappings collected from receivers. Use filters to show only relevant CAIDs.
+                    Export as oscam.srvid2 (channel names) or oscam.services (reader routing).
+                </p>
+                <div style="margin-bottom: 1rem; display:flex; align-items:center; gap:1rem; flex-wrap:wrap;">
+                    <span style="color:#888; font-size:0.85rem;">Filter CAIDs:</span>
+                    <div id="caid-filters" style="display:flex; gap:0.8rem; flex-wrap:wrap;"></div>
+                    <button class="btn btn-primary btn-sm" onclick="exportServices()">Export oscam.services</button>
+                    <button class="btn btn-primary btn-sm" onclick="exportSrvid2()">Export oscam.srvid2</button>
+                    <button class="btn btn-sm" onclick="clearMappings()" style="border:1px solid #ef5350;color:#ef5350;margin-left:auto;">Clear mappings</button>
+                    <button class="btn btn-sm" onclick="clearEcmData()" style="border:1px solid #ef5350;color:#ef5350;">Clear ECM data</button>
+                </div>
+                <table>
+                    <thead><tr><th>CAID</th><th>SID</th><th>Channel</th><th>Provider</th><th>Last Seen</th></tr></thead>
+                    <tbody id="mappings-body"></tbody>
+                </table>
+                <div id="mappings-empty" class="empty">No mappings yet — start log parsing to build them</div>
+            </div>
+
+            <!-- File Sync Panel -->
+            <div class="card">
+                <h2>Server Sync</h2>
+                <div style="display:flex;gap:1rem;margin-bottom:1rem;flex-wrap:wrap;">
+                    <button class="btn btn-primary btn-sm" onclick="loadSrvid2Suggestions()" style="position:relative;">
+                        Check srvid2 <span id="badge-srvid2" style="display:none;background:#ef5350;color:#fff;font-size:0.65rem;padding:1px 5px;border-radius:8px;margin-left:4px;"></span>
+                    </button>
+                    <button class="btn btn-primary btn-sm" onclick="loadServicesSuggestions()" style="position:relative;">
+                        Check services <span id="badge-services" style="display:none;background:#ef5350;color:#fff;font-size:0.65rem;padding:1px 5px;border-radius:8px;margin-left:4px;"></span>
+                    </button>
+                    <button class="btn btn-sm" onclick="loadBackups()" style="border:1px solid #0f3460;color:#888;">History & Restore</button>
+                    <button class="btn btn-sm" onclick="manualBackup('oscam.srvid2')" style="border:1px solid #0f3460;color:#888;">Backup srvid2</button>
+                    <button class="btn btn-sm" onclick="manualBackup('oscam.services')" style="border:1px solid #0f3460;color:#888;">Backup services</button>
+                </div>
+                <p style="font-size:0.75rem;color:#666;margin-top:-0.5rem;margin-bottom:1rem;">Backup is created automatically before each push.</p>
+
+                <!-- srvid2 suggestions -->
+                <div id="sync-srvid2" style="display:none;">
+                    <h3>oscam.srvid2 — Suggested Updates</h3>
+                    <div style="margin:0.5rem 0;display:flex;gap:0.5rem;">
+                        <button class="btn btn-sm" onclick="toggleSyncAll('srvid2', true)" style="border:1px solid #0f3460;color:#aaa;">Select all</button>
+                        <button class="btn btn-sm" onclick="toggleSyncAll('srvid2', false)" style="border:1px solid #0f3460;color:#aaa;">Select none</button>
+                        <button class="btn btn-primary btn-sm" onclick="pushSrvid2()">Push selected to server</button>
+                    </div>
+                    <table>
+                        <thead><tr><th></th><th>CAID:SID</th><th>Current</th><th>→</th><th>New Name</th><th>Provider</th></tr></thead>
+                        <tbody id="srvid2-suggestions-body"></tbody>
+                    </table>
+                </div>
+
+                <!-- services suggestions -->
+                <div id="sync-services" style="display:none;">
+                    <h3>oscam.services — Suggested Additions</h3>
+                    <div style="margin:0.5rem 0;display:flex;gap:0.5rem;">
+                        <button class="btn btn-sm" onclick="toggleSyncAll('services', true)" style="border:1px solid #0f3460;color:#aaa;">Select all</button>
+                        <button class="btn btn-sm" onclick="toggleSyncAll('services', false)" style="border:1px solid #0f3460;color:#aaa;">Select none</button>
+                        <button class="btn btn-primary btn-sm" onclick="pushServices()">Push selected to server</button>
+                    </div>
+                    <table>
+                        <thead><tr><th></th><th>Group</th><th>SID</th><th>Channel</th></tr></thead>
+                        <tbody id="services-suggestions-body"></tbody>
+                    </table>
+                </div>
+
+                <!-- Backups -->
+                <div id="sync-backups" style="display:none;">
+                    <h3>File Backups</h3>
+                    <table>
+                        <thead><tr><th>File</th><th>Date</th><th>Note</th><th></th></tr></thead>
+                        <tbody id="backups-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Automapping Panel -->
+            <div class="card">
+                <h2>Automapping</h2>
+                <p style="font-size:0.8rem;color:#888;margin-bottom:0.8rem;">
+                    Automatically cycle through a bouquet on a receiver to discover all SID→channel name mappings.
+                    Navigate the receiver to the <strong>first channel</strong> of the desired bouquet, then press Start.
+                    It will change channel every N seconds until it loops back to the first channel.
+                </p>
+                <div id="automap-controls" style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap;">
+                    <select id="automap-receiver" style="min-width:180px;">
+                        <option value="">-- select receiver --</option>
+                    </select>
+                    <label style="font-size:0.8rem;color:#aaa;">Interval:
+                        <input id="automap-interval" type="number" value="10" min="5" max="60" style="width:50px;"> sec
+                    </label>
+                    <button class="btn btn-primary btn-sm" onclick="startAutomap()">▶ Start</button>
+                    <button class="btn btn-sm" onclick="stopAutomap()" style="border:1px solid #ef5350;color:#ef5350;">■ Stop</button>
+                </div>
+                <div id="automap-status" style="margin-top:0.8rem;display:none;">
+                    <div style="display:flex;gap:2rem;margin-bottom:0.5rem;flex-wrap:wrap;">
+                        <span>Receiver: <strong id="automap-receiver-name">—</strong></span>
+                        <span>Status: <strong id="automap-state">—</strong></span>
+                        <span>Channels: <strong id="automap-count">0</strong></span>
+                        <span>Current: <strong id="automap-current">—</strong></span>
+                    </div>
+                    <div id="automap-log" style="background:#0a0a1a;padding:0.5rem;border-radius:4px;font-size:0.75rem;max-height:150px;overflow-y:auto;font-family:monospace;color:#aaa;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SETTINGS SECTION -->
+        <div id="section-settings" class="section">
+            <!-- General Settings -->
+            <div class="card">
+                <h2>General</h2>
+                <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem;">
+                    <label>Timezone</label>
+                    <select id="tz-select" onchange="saveTimezone()" style="width:220px;">
+                        <option value="Europe/Bratislava">Europe/Bratislava</option>
+                        <option value="Europe/Prague">Europe/Prague</option>
+                        <option value="Europe/London">Europe/London</option>
+                        <option value="Europe/Berlin">Europe/Berlin</option>
+                        <option value="Europe/Vienna">Europe/Vienna</option>
+                        <option value="Europe/Budapest">Europe/Budapest</option>
+                        <option value="Europe/Warsaw">Europe/Warsaw</option>
+                        <option value="UTC">UTC</option>
+                    </select>
+                </div>
+                <h3>Dashboard Login</h3>
+                <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.5rem;">
+                    <span style="font-size:0.85rem;color:#888;">User: <strong style="color:#e0e0e0;">admin</strong></span>
+                    <input id="auth-pass" placeholder="new password" type="password" style="width:150px;">
+                    <button class="btn btn-primary btn-sm" onclick="saveAuth()">Change Password</button>
+                </div>
+            </div>
+
+            <!-- Server -->
+            <div class="card">
+                <h2>OScam Server</h2>
+                <div class="grid" style="margin-top: 0.5rem;">
+                    <div class="form-group"><label>Name</label><input id="srv-name" placeholder="main"></div>
+                    <div class="form-group"><label>Host (IP)</label><input id="srv-host" placeholder="192.168.1.100"></div>
+                    <div class="form-group"><label>Port</label><input id="srv-port" value="8888" type="number"></div>
+                    <div class="form-group"><label>Log Source</label><input id="srv-log" value="api" placeholder="api or /path/to/oscam.log"></div>
+                    <div class="form-group"><label>Username (optional)</label><input id="srv-user" placeholder="admin"></div>
+                    <div class="form-group"><label>Password (optional)</label><input id="srv-pass" type="password" placeholder="leave blank to keep current"></div>
+                </div>
+                <button class="btn btn-primary" onclick="saveServer()">Save Server</button>
+            </div>
+
+            <!-- User-Device Mapping -->
+            <div class="card">
+                <h2>User → Receiver Mapping</h2>
+                <p style="font-size: 0.8rem; color: #888; margin-bottom: 0.5rem;">
+                    Map OScam users to their satellite receivers for channel resolution.
+                </p>
+                <div id="discovered-users-list" style="margin-bottom: 0.8rem;"></div>
+                <table>
+                    <thead><tr><th>User</th><th>Receiver IP</th><th>Port</th><th>Login</th><th></th></tr></thead>
+                    <tbody id="user-devices-body"></tbody>
+                    <tfoot>
+                        <tr id="ud-add-row">
+                            <td>
+                                <select id="ud-username" style="width:100%;">
+                                    <option value="">-- select user --</option>
+                                </select>
+                            </td>
+                            <td><input id="ud-ip" placeholder="192.168.1.50" style="width:100%;"></td>
+                            <td><input id="ud-port" value="80" type="number" style="width:60px;"></td>
+                            <td style="display:flex;gap:4px;">
+                                <input id="ud-rcv-user" placeholder="user" style="width:70px;">
+                                <input id="ud-rcv-pass" placeholder="pass" type="password" style="width:70px;">
+                            </td>
+                            <td><button class="btn btn-primary btn-sm" onclick="addUserDevice()">+</button></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+        </div>
+
+        <!-- LOGS SECTION -->
+        <div id="section-logs" class="section">
+            <div class="card">
+                <h2>📋 Application Logs</h2>
+                <div class="refresh-info">Auto-refreshes every 5s</div>
+                <div id="logs-container" style="max-height: 600px; overflow-y: auto; font-family: monospace; font-size: 0.8rem; line-height: 1.6;">
+                </div>
+                <div id="logs-empty" class="empty">No logs yet</div>
+            </div>
+        </div>
+
+        <!-- Edit Server Modal -->
+    </div>
+
+    <script>
+        // --- Navigation ---
+        function showSection(name) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
+            document.getElementById('section-' + name).classList.add('active');
+            event.target.classList.add('active');
+            if (name === 'readers') loadReaders();
+            if (name === 'stats') loadGlobalStats();
+            if (name === 'mappings') { loadMappings(); checkSyncBadge(); populateAutomapReceivers(); }
+            if (name === 'settings') loadSettings();
+            if (name === 'logs') loadLogs();
+        }
+
+        // --- API helpers ---
+        async function api(url, opts = {}) {
+            const resp = await fetch(url, {
+                headers: { 'Content-Type': 'application/json' },
+                ...opts,
+            });
+            return resp.json();
+        }
+
+        function badge(tag) {
+            const cls = { SK: 'badge-sk', CZ: 'badge-cz', shared: 'badge-shared' }[tag] || 'badge-unknown';
+            return `<span class="badge ${cls}">${tag || 'unknown'}</span>`;
+        }
+
+        function formatDuration(seconds) {
+            if (!seconds) return '-';
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            if (h > 0) return `${h}h ${m}m`;
+            return `${m}m`;
+        }
+
+        // --- Live Section ---
+        async function loadLive() {
+            const data = await api('/api/live');
+            const body = document.getElementById('live-body');
+            const empty = document.getElementById('live-empty');
+
+            if (!data.active_sessions || data.active_sessions.length === 0) {
+                body.innerHTML = '';
+                empty.style.display = 'block';
+                return;
+            }
+            empty.style.display = 'none';
+            body.innerHTML = data.active_sessions.map(s => `
+                <tr>
+                    <td><strong>${s.username}</strong></td>
+                    <td>${s.channel_name || '<span style="color:#888">SID ' + s.sid + '</span>'}</td>
+                    <td>${s.caid}:${s.sid}</td>
+                    <td>${s.provider ? `<span class="badge" style="background:#0f3460;color:#4fc3f7;">${s.provider}</span>` : ''}</td>
+                    <td>${s.ecm_time_ms ? s.ecm_time_ms + ' ms' : '-'}</td>
+                    <td>${s.server}</td>
+                </tr>
+            `).join('');
+        }
+
+        // --- Stats Section ---
+        let dailyChart = null;
+        let cardBusyChart = null;
+        let cardUsersChart = null;
+        let cardChannelsChart = null;
+        const cardColors = ['#00d4aa', '#4fc3f7', '#ff9800', '#ab47bc', '#ef5350', '#66bb6a'];
+
+        async function loadGlobalStats() {
+            const data = await api('/api/stats/global');
+
+            // Summary boxes
+            const totalHours = (data.user_totals || []).reduce((sum, u) => sum + (u.total || 0), 0) / 3600;
+            document.getElementById('stat-total-hours').textContent = totalHours.toFixed(1);
+            document.getElementById('stat-users').textContent = (data.user_totals || []).length;
+            document.getElementById('stat-channels').textContent = (data.top_channels || []).length;
+
+            // Top channels table
+            document.getElementById('top-channels-body').innerHTML = (data.top_channels || []).map(c => `
+                <tr><td>${c.channel_name}</td><td>${(c.total/3600).toFixed(1)}</td><td>${c.users}</td></tr>
+            `).join('');
+
+            // User leaderboard
+            document.getElementById('user-leaderboard-body').innerHTML = (data.user_totals || []).map(u => `
+                <tr><td>${u.username}</td><td>${(u.total/3600).toFixed(1)}</td><td>${u.sessions}</td></tr>
+            `).join('');
+
+            // Daily chart
+            const dailyData = (data.daily_activity || []).map(d => ({ x: d.day, y: Math.round(d.total / 60) }));
+            if (dailyChart) dailyChart.destroy();
+            if (dailyData.length > 0) {
+                dailyChart = new ApexCharts(document.getElementById('chart-daily'), {
+                    chart: { type: 'bar', height: 250, background: 'transparent', toolbar: { show: false } },
+                    series: [{ name: 'Minutes', data: dailyData }],
+                    xaxis: { type: 'category', labels: { style: { colors: '#888' } } },
+                    yaxis: { labels: { style: { colors: '#888' } } },
+                    theme: { mode: 'dark' },
+                    colors: ['#00d4aa'],
+                    plotOptions: { bar: { borderRadius: 3 } },
+                });
+                dailyChart.render();
+            }
+
+            // Populate user select
+            const sel = document.getElementById('user-stats-select');
+            const users = (data.user_totals || []).map(u => u.username);
+            sel.innerHTML = '<option value="">-- select --</option>' + users.map(u => `<option value="${u}">${u}</option>`).join('');
+
+            // Load card stats
+            await loadCardStats();
+        }
+
+        async function loadCardStats() {
+            const data = await api('/api/stats/cards');
+
+            // Card busy hours stat box
+            const totals = data.card_totals || [];
+            const cardText = totals.map(c => `${c.reader}: ${c.busy_hours}h`).join(' | ');
+            document.getElementById('stat-card-hours').textContent = cardText || '-';
+
+            // Helper: transform daily data into ApexCharts multi-series format
+            function buildSeries(dailyData, valueKey) {
+                const readers = [...new Set(dailyData.map(d => d.reader))];
+                const days = [...new Set(dailyData.map(d => d.day))].sort();
+                return {
+                    series: readers.map(reader => ({
+                        name: reader,
+                        data: days.map(day => {
+                            const row = dailyData.find(d => d.day === day && d.reader === reader);
+                            return { x: day, y: row ? row[valueKey] : 0 };
+                        })
+                    })),
+                    categories: days
+                };
+            }
+
+            const chartOpts = (series, yLabel) => ({
+                chart: { type: 'bar', height: 250, background: 'transparent', toolbar: { show: false }, stacked: false },
+                series: series,
+                xaxis: { type: 'category', labels: { style: { colors: '#888' }, rotate: -45, rotateAlways: series[0]?.data?.length > 14 } },
+                yaxis: { labels: { style: { colors: '#888' } }, title: { text: yLabel, style: { color: '#888' } } },
+                theme: { mode: 'dark' },
+                colors: cardColors.slice(0, series.length),
+                plotOptions: { bar: { borderRadius: 2, columnWidth: '70%' } },
+                legend: { labels: { colors: '#ccc' } },
+                dataLabels: { enabled: false },
+            });
+
+            // Chart 1: Card busy hours per day
+            if (cardBusyChart) cardBusyChart.destroy();
+            const busy = buildSeries(data.daily_busy_hours || [], 'busy_hours');
+            if (busy.series.length > 0) {
+                cardBusyChart = new ApexCharts(document.getElementById('chart-card-busy'), chartOpts(busy.series, 'Hours'));
+                cardBusyChart.render();
+            }
+
+            // Chart 2: Unique users per card per day
+            if (cardUsersChart) cardUsersChart.destroy();
+            const users = buildSeries(data.daily_unique_users || [], 'unique_users');
+            if (users.series.length > 0) {
+                cardUsersChart = new ApexCharts(document.getElementById('chart-card-users'), chartOpts(users.series, 'Users'));
+                cardUsersChart.render();
+            }
+
+            // Chart 3: Unique channels per card per day
+            if (cardChannelsChart) cardChannelsChart.destroy();
+            const channels = buildSeries(data.daily_unique_channels || [], 'unique_channels');
+            if (channels.series.length > 0) {
+                cardChannelsChart = new ApexCharts(document.getElementById('chart-card-channels'), chartOpts(channels.series, 'Channels'));
+                cardChannelsChart.render();
+            }
+        }
+
+        async function loadUserStats() {
+            const user = document.getElementById('user-stats-select').value;
+            const container = document.getElementById('user-stats-content');
+            if (!user) { container.innerHTML = ''; return; }
+
+            const data = await api(`/api/stats/user/${user}`);
+            container.innerHTML = `
+                <div class="grid" style="margin-bottom: 1rem;">
+                    <div class="stat-box"><div class="value">${data.total_hours}</div><div class="label">Hours (${data.period_days}d)</div></div>
+                </div>
+                <h3>Top Channels</h3>
+                <table>
+                    <thead><tr><th>Channel</th><th>Hours</th><th>Sessions</th></tr></thead>
+                    <tbody>${(data.top_channels || []).map(c => `
+                        <tr><td>${c.channel_name}</td><td>${(c.total/3600).toFixed(1)}</td><td>${c.sessions}</td></tr>
+                    `).join('')}</tbody>
+                </table>
+            `;
+        }
+
+        // --- Mappings Section ---
+        async function loadMappings() {
+            const data = await api('/api/mappings');
+            const body = document.getElementById('mappings-body');
+            const empty = document.getElementById('mappings-empty');
+            const mappings = data.mappings || [];
+
+            if (mappings.length === 0) { body.innerHTML = ''; empty.style.display = 'block'; return; }
+            empty.style.display = 'none';
+
+            // Build CAID filter checkboxes
+            const providers = {'0B00': 'AntikSAT', '0624': 'Skylink', '0668': 'RTVS'};
+            const allCaids = [...new Set(mappings.map(m => m.caid))].sort();
+            const filterDiv = document.getElementById('caid-filters');
+            // Load saved filter from localStorage
+            const savedFilter = JSON.parse(localStorage.getItem('caid_filter') || 'null');
+            const isFirstLoad = savedFilter === null;
+
+            filterDiv.innerHTML = allCaids.map(caid => {
+                const label = providers[caid] || caid;
+                const checked = isFirstLoad ? (caid === '0B00' || caid === '0624') : (savedFilter.includes(caid));
+                return `<label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:0.85rem;">
+                    <input type="checkbox" value="${caid}" ${checked ? 'checked' : ''} onchange="filterMappings()"> ${label} (${caid})
+                </label>`;
+            }).join('');
+
+            window._allMappings = mappings;
+            filterMappings();
+        }
+
+        function filterMappings() {
+            const providers = {'0B00': 'AntikSAT', '0624': 'Skylink', '0668': 'RTVS'};
+            const checked = [...document.querySelectorAll('#caid-filters input:checked')].map(cb => cb.value);
+            localStorage.setItem('caid_filter', JSON.stringify(checked));
+            const filtered = (window._allMappings || []).filter(m => checked.includes(m.caid));
+            const body = document.getElementById('mappings-body');
+            body.innerHTML = filtered.map(m => {
+                const provider = providers[m.caid] || m.caid;
+                return `
+                <tr>
+                    <td>${m.caid}</td>
+                    <td>${m.sid}</td>
+                    <td>${m.channel_name || '-'}</td>
+                    <td><span class="badge" style="background:#0f3460;color:#4fc3f7;">${provider}</span></td>
+                    <td>${m.last_seen ? new Date(m.last_seen + 'Z').toLocaleString() : '-'}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        async function clearMappings() {
+            if (!confirm('Delete ALL channel mappings? This cannot be undone.')) return;
+            if (!confirm('Are you sure? This will clear all SID→channel name data.')) return;
+            await api('/api/mappings/clear', { method: 'DELETE' });
+            loadMappings();
+        }
+
+        async function clearEcmData() {
+            if (!confirm('Delete ALL ECM event data? This resets services suggestions and stats.')) return;
+            if (!confirm('Are you sure? This cannot be undone.')) return;
+            await api('/api/ecm/clear', { method: 'DELETE' });
+            checkSyncBadge();
+        }
+
+        async function exportServices() {
+            const checked = [...document.querySelectorAll('#caid-filters input:checked')].map(cb => cb.value);
+            const params = checked.length ? '?caids=' + checked.join(',') : '';
+            const resp = await fetch('/api/mappings/export' + params);
+            const text = await resp.text();
+            const blob = new Blob([text], { type: 'text/plain' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'oscam.services';
+            a.click();
+        }
+
+        async function exportSrvid2() {
+            const checked = [...document.querySelectorAll('#caid-filters input:checked')].map(cb => cb.value);
+            const params = checked.length ? '?caids=' + checked.join(',') : '';
+            const resp = await fetch('/api/mappings/export-srvid2' + params);
+            const text = await resp.text();
+            const blob = new Blob([text], { type: 'text/plain' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'oscam.srvid2';
+            a.click();
+        }
+
+        // --- Sync Functions ---
+        let _srvid2Suggestions = [];
+        let _servicesSuggestions = [];
+
+        async function checkSyncBadge() {
+            try {
+                const data = await api('/api/sync/suggestion-counts');
+                const srvid2Badge = document.getElementById('badge-srvid2');
+                const servicesBadge = document.getElementById('badge-services');
+                if (data.srvid2 > 0) {
+                    srvid2Badge.textContent = data.srvid2;
+                    srvid2Badge.style.display = 'inline';
+                } else {
+                    srvid2Badge.style.display = 'none';
+                }
+                if (data.services > 0) {
+                    servicesBadge.textContent = data.services;
+                    servicesBadge.style.display = 'inline';
+                } else {
+                    servicesBadge.style.display = 'none';
+                }
+            } catch(e) {}
+        }
+
+        async function loadSrvid2Suggestions() {
+            const data = await api('/api/sync/srvid2/suggestions');
+            _srvid2Suggestions = data.suggestions || [];
+            const panel = document.getElementById('sync-srvid2');
+            const body = document.getElementById('srvid2-suggestions-body');
+            panel.style.display = 'block';
+            document.getElementById('sync-services').style.display = 'none';
+            document.getElementById('sync-backups').style.display = 'none';
+
+            if (_srvid2Suggestions.length === 0) {
+                body.innerHTML = '<tr><td colspan="6" style="color:#888;text-align:center;">Everything up to date ✓</td></tr>';
+                return;
+            }
+            body.innerHTML = _srvid2Suggestions.map((s, i) => `
+                <tr>
+                    <td><input type="checkbox" class="sync-cb-srvid2" data-idx="${i}" checked></td>
+                    <td>${s.caid}:${s.sid}</td>
+                    <td style="color:#888;">${s.current_name || '<em>missing</em>'}</td>
+                    <td>→</td>
+                    <td><strong>${s.channel_name}</strong></td>
+                    <td>${s.provider || ''}</td>
+                </tr>
+            `).join('');
+        }
+
+        async function loadServicesSuggestions() {
+            const data = await api('/api/sync/services/suggestions');
+            _servicesSuggestions = data.suggestions || [];
+            const panel = document.getElementById('sync-services');
+            const body = document.getElementById('services-suggestions-body');
+            panel.style.display = 'block';
+            document.getElementById('sync-srvid2').style.display = 'none';
+            document.getElementById('sync-backups').style.display = 'none';
+
+            if (_servicesSuggestions.length === 0) {
+                body.innerHTML = '<tr><td colspan="4" style="color:#888;text-align:center;">Everything up to date ✓</td></tr>';
+                return;
+            }
+            body.innerHTML = _servicesSuggestions.map((s, i) => `
+                <tr>
+                    <td><input type="checkbox" class="sync-cb-services" data-idx="${i}" checked></td>
+                    <td>${s.group}</td>
+                    <td>${s.sid}</td>
+                    <td>${s.channel_name || ''}</td>
+                </tr>
+            `).join('');
+        }
+
+        async function loadBackups() {
+            const data = await api('/api/sync/backups');
+            const panel = document.getElementById('sync-backups');
+            const body = document.getElementById('backups-body');
+            panel.style.display = 'block';
+            document.getElementById('sync-srvid2').style.display = 'none';
+            document.getElementById('sync-services').style.display = 'none';
+
+            const backups = data.backups || [];
+            if (backups.length === 0) {
+                body.innerHTML = '<tr><td colspan="4" style="color:#888;text-align:center;">No backups yet</td></tr>';
+                return;
+            }
+            body.innerHTML = backups.map(b => `
+                <tr>
+                    <td>${b.filename}</td>
+                    <td>${new Date(b.created_at + 'Z').toLocaleString()}</td>
+                    <td style="color:#888;">${b.note || ''}</td>
+                    <td><button class="btn btn-sm" onclick="restoreBackup(${b.id})" style="border:1px solid #0f3460;color:#ff9800;">Restore</button></td>
+                </tr>
+            `).join('');
+        }
+
+        function toggleSyncAll(type, checked) {
+            document.querySelectorAll(`.sync-cb-${type}`).forEach(cb => cb.checked = checked);
+        }
+
+        async function pushSrvid2() {
+            const selected = [];
+            document.querySelectorAll('.sync-cb-srvid2:checked').forEach(cb => {
+                selected.push(_srvid2Suggestions[parseInt(cb.dataset.idx)]);
+            });
+            if (!selected.length) return;
+            const result = await api('/api/sync/srvid2/push', {
+                method: 'POST', body: JSON.stringify({ selected }),
+            });
+            if (result.status === 'ok') {
+                alert(`Pushed ${selected.length} updates. Backup saved.`);
+                loadSrvid2Suggestions();
+                checkSyncBadge();
+            }
+        }
+
+        async function pushServices() {
+            const selected = [];
+            document.querySelectorAll('.sync-cb-services:checked').forEach(cb => {
+                selected.push(_servicesSuggestions[parseInt(cb.dataset.idx)]);
+            });
+            if (!selected.length) return;
+            const result = await api('/api/sync/services/push', {
+                method: 'POST', body: JSON.stringify({ selected }),
+            });
+            if (result.status === 'ok') {
+                alert(`Pushed ${selected.length} SIDs. Backup saved.`);
+                loadServicesSuggestions();
+                checkSyncBadge();
+            }
+        }
+
+        async function restoreBackup(id) {
+            if (!confirm('Restore this backup? Current file will be backed up first.')) return;
+            const result = await api(`/api/sync/restore/${id}`, { method: 'POST' });
+            if (result.status === 'ok') {
+                alert(`Restored ${result.filename}. Previous version backed up.`);
+                loadBackups();
+            }
+        }
+
+        async function manualBackup(filename) {
+            const result = await api(`/api/sync/backup/${filename}`, { method: 'POST' });
+            if (result.status === 'ok') {
+                alert(`Backup of ${filename} created.`);
+                loadBackups();
+            } else {
+                alert('Backup failed: ' + (result.detail || 'unknown error'));
+            }
+        }
+
+        // --- Automapping ---
+        async function startAutomap() {
+            const username = document.getElementById('automap-receiver').value;
+            const interval = parseInt(document.getElementById('automap-interval').value) || 10;
+            if (!username) { alert('Select a receiver first'); return; }
+            await api('/api/automap/start', { method: 'POST', body: JSON.stringify({ username, interval }) });
+            document.getElementById('automap-status').style.display = 'block';
+            pollAutomapStatus();
+        }
+
+        async function stopAutomap() {
+            await api('/api/automap/stop', { method: 'POST' });
+        }
+
+        let _automapPollTimer = null;
+        async function pollAutomapStatus() {
+            const data = await api('/api/automap/status');
+            const panel = document.getElementById('automap-status');
+            panel.style.display = 'block';
+            document.getElementById('automap-state').textContent = data.running ? '🔄 Running' : '⏹ Stopped';
+            document.getElementById('automap-count').textContent = data.channels_found;
+            document.getElementById('automap-current').textContent = data.current_channel || '—';
+            document.getElementById('automap-receiver-name').textContent = data.username || '—';
+            document.getElementById('automap-log').innerHTML = (data.log || []).map(l => {
+                let color = '';
+                if (l.startsWith('[OK]')) color = 'color:#66bb6a;';
+                else if (l.startsWith('[FTA]')) color = 'color:#ff9800;';
+                else if (l.startsWith('[ERR]')) color = 'color:#ef5350;';
+                else if (l.startsWith('[FTA/ERR]')) color = 'color:#ff9800;';
+                return `<div style="${color}">${l}</div>`;
+            }).join('');
+
+            if (data.running) {
+                _automapPollTimer = setTimeout(pollAutomapStatus, 2000);
+            } else {
+                if (_automapPollTimer) clearTimeout(_automapPollTimer);
+            }
+        }
+
+        function populateAutomapReceivers() {
+            api('/api/settings/user-devices').then(data => {
+                const sel = document.getElementById('automap-receiver');
+                const map = data.user_device_map || {};
+                sel.innerHTML = '<option value="">-- select receiver --</option>' +
+                    Object.entries(map).map(([u, dev]) => {
+                        const ip = typeof dev === 'object' ? dev.ip : dev;
+                        return `<option value="${u}">${u} (${ip})</option>`;
+                    }).join('');
+            });
+        }
+
+        // --- Readers Section ---
+        async function loadReaders() {
+            const data = await api('/api/readers');
+            const container = document.getElementById('readers-content');
+            const empty = document.getElementById('readers-empty');
+            const readers = data.readers || {};
+
+            let hasReaders = false;
+            let html = '';
+            for (const [serverName, serverReaders] of Object.entries(readers)) {
+                if (Array.isArray(serverReaders) && serverReaders.length > 0) {
+                    hasReaders = true;
+                    html += `<h3 style="margin-top: 1rem;">Server: ${serverName}</h3>`;
+                    html += `<table>
+                        <thead><tr><th>Reader</th><th>Protocol</th><th>CAIDs</th><th>Entitlements</th><th>Serial</th><th>Status</th><th></th></tr></thead>
+                        <tbody>`;
+                    for (const r of serverReaders) {
+                        const statusColor = r.status === 'CONNECTED' || r.status === 'CARDOK' ? '#66bb6a' : '#ff9800';
+                        html += `<tr>
+                            <td><strong>${r.label}</strong></td>
+                            <td>${r.protocol}</td>
+                            <td>${(r.caid || []).join(', ') || '-'}</td>
+                            <td><strong>${r.entitlements_count}</strong></td>
+                            <td style="font-family: monospace; font-size: 0.8rem;">${r.card_serial || '-'}</td>
+                            <td><span style="color: ${statusColor}">${r.status || 'unknown'}</span></td>
+                            <td><button class="btn btn-primary btn-sm" onclick="showEntitlements('${serverName}', '${r.label}')">Details</button></td>
+                        </tr>`;
+                    }
+                    html += `</tbody></table>`;
+                }
+            }
+
+            if (hasReaders) {
+                container.innerHTML = html;
+                empty.style.display = 'none';
+            } else {
+                container.innerHTML = '';
+                empty.style.display = 'block';
+            }
+        }
+
+        async function showEntitlements(server, readerLabel) {
+            const data = await api(`/api/readers/${server}/${encodeURIComponent(readerLabel)}/entitlements`);
+            const card = document.getElementById('entitlements-card');
+            const body = document.getElementById('entitlements-body');
+            document.getElementById('ent-reader-name').textContent = `— ${readerLabel} (${data.count})`;
+
+            body.innerHTML = (data.entitlements || []).map(e => `
+                <tr>
+                    <td style="font-family: monospace;">${e.caid}</td>
+                    <td style="font-family: monospace;">${e.provid}</td>
+                    <td>${e.exp_date || '-'}</td>
+                </tr>
+            `).join('');
+
+            card.style.display = 'block';
+        }
+
+        // --- Settings Section ---
+        async function loadSettings() {
+            const [serverData, devices, discovered, settings] = await Promise.all([
+                api('/api/settings/server'),
+                api('/api/settings/user-devices'),
+                api('/api/users/discovered'),
+                api('/api/settings'),
+            ]);
+
+            // Timezone
+            const tzSel = document.getElementById('tz-select');
+            const currentTz = settings?.web?.timezone || 'Europe/Bratislava';
+            if (tzSel) tzSel.value = currentTz;
+
+            // Server
+            const s = serverData.server;
+            if (s) {
+                document.getElementById('srv-name').value = s.name || '';
+                document.getElementById('srv-host').value = s.host || '';
+                document.getElementById('srv-port').value = s.port || 8888;
+                document.getElementById('srv-log').value = s.log_source || 'api';
+                document.getElementById('srv-user').value = s.username || '';
+                document.getElementById('srv-pass').value = '';
+            } else {
+                document.getElementById('srv-name').value = '';
+                document.getElementById('srv-host').value = '';
+                document.getElementById('srv-port').value = '8888';
+                document.getElementById('srv-log').value = 'api';
+                document.getElementById('srv-user').value = '';
+                document.getElementById('srv-pass').value = '';
+            }
+
+            // User-Device mappings
+            const map = devices.user_device_map || {};
+            document.getElementById('user-devices-body').innerHTML = Object.entries(map).map(([u, dev]) => {
+                const isObj = typeof dev === 'object';
+                const ip = isObj ? dev.ip : dev;
+                const port = isObj ? dev.port : 80;
+                const hasAuth = isObj && dev.username;
+                const rcvUser = isObj ? (dev.username || '') : '';
+                const rcvPass = isObj ? (dev.password || '') : '';
+                return `
+                <tr>
+                    <td><strong>${u}</strong></td>
+                    <td>${ip}</td>
+                    <td>${port}</td>
+                    <td>${hasAuth ? '🔐 ' + dev.username : '<span style="color:#666">—</span>'}</td>
+                    <td>
+                        <button class="btn btn-primary btn-sm" onclick="editUserDevice('${u}','${ip}',${port},'${rcvUser}','${rcvPass}')">✎</button>
+                        <button class="btn btn-danger btn-sm" onclick="removeUserDevice('${u}')">×</button>
+                    </td>
+                </tr>`;
+            }).join('');
+
+            // Discovered users dropdown
+            const dSel = document.getElementById('ud-username');
+            const dUsers = (discovered.users || []).map(u => u.username);
+            const mappedUsers = Object.keys(map);
+            const availableUsers = dUsers.filter(u => !mappedUsers.includes(u));
+            dSel.innerHTML = '<option value="">-- select user --</option>' + availableUsers.map(u => `<option value="${u}">${u}</option>`).join('');
+
+            // Show unmapped discovered users with delete option
+            const discList = document.getElementById('discovered-users-list');
+            if (discList) {
+                discList.innerHTML = availableUsers.map(u => `
+                    <span style="display:inline-flex;align-items:center;gap:2px;background:#0f3460;padding:2px 8px;border-radius:4px;margin:2px;font-size:0.8rem;">
+                        ${u} <button onclick="deleteDiscoveredUser('${u}')" style="background:none;border:none;color:#ef5350;cursor:pointer;font-size:1rem;padding:0 2px;">×</button>
+                    </span>
+                `).join('');
+            }
+        }
+
+        async function saveTimezone() {
+            const tz = document.getElementById('tz-select').value;
+            await api('/api/settings/timezone', { method: 'PUT', body: JSON.stringify({ timezone: tz }) });
+        }
+
+        async function saveAuth() {
+            const password = document.getElementById('auth-pass').value;
+            if (!password) { alert('Enter new password'); return; }
+            await api('/api/settings/auth', { method: 'PUT', body: JSON.stringify({ username: 'admin', password }) });
+            alert('Password updated. Page will reload for re-login.');
+            window.location.reload();
+        }
+
+        async function saveServer() {
+            const payload = {
+                name: document.getElementById('srv-name').value,
+                host: document.getElementById('srv-host').value,
+                port: parseInt(document.getElementById('srv-port').value),
+                log_source: document.getElementById('srv-log').value,
+            };
+            if (!payload.name || !payload.host) { alert('Name and host are required'); return; }
+            const user = document.getElementById('srv-user').value;
+            const pass = document.getElementById('srv-pass').value;
+            if (user) payload.username = user;
+            if (pass) payload.password = pass;
+            await api('/api/settings/server', {
+                method: 'POST',
+                body: JSON.stringify(payload),
+            });
+            loadSettings();
+        }
+
+        async function addUserDevice() {
+            const username = document.getElementById('ud-username').value;
+            const ip = document.getElementById('ud-ip').value;
+            if (!username || !ip) return;
+            const payload = { username, receiver_ip: ip };
+            const port = document.getElementById('ud-port').value;
+            const rcvUser = document.getElementById('ud-rcv-user').value;
+            const rcvPass = document.getElementById('ud-rcv-pass').value;
+            if (port) payload.receiver_port = parseInt(port);
+            if (rcvUser) payload.receiver_username = rcvUser;
+            if (rcvPass) payload.receiver_password = rcvPass;
+            await api('/api/settings/user-devices', {
+                method: 'POST',
+                body: JSON.stringify(payload),
+            });
+            // Clear inputs
+            document.getElementById('ud-ip').value = '';
+            document.getElementById('ud-port').value = '80';
+            document.getElementById('ud-rcv-user').value = '';
+            document.getElementById('ud-rcv-pass').value = '';
+            loadSettings();
+        }
+
+        async function removeUserDevice(username) {
+            await api(`/api/settings/user-devices/${username}`, { method: 'DELETE' });
+            loadSettings();
+        }
+
+        async function deleteDiscoveredUser(username) {
+            await api(`/api/users/discovered/${username}`, { method: 'DELETE' });
+            loadSettings();
+        }
+
+        function editUserDevice(username, ip, port, rcvUser, rcvPass) {
+            // Fill the add row with existing values for editing
+            const sel = document.getElementById('ud-username');
+            // Add the user as an option if not already there (since mapped users are filtered out)
+            if (![...sel.options].some(o => o.value === username)) {
+                const opt = document.createElement('option');
+                opt.value = username;
+                opt.text = username;
+                sel.appendChild(opt);
+            }
+            sel.value = username;
+            document.getElementById('ud-ip').value = ip;
+            document.getElementById('ud-port').value = port;
+            document.getElementById('ud-rcv-user').value = rcvUser;
+            document.getElementById('ud-rcv-pass').value = rcvPass;
+        }
+
+        // --- Logs Section ---
+        async function loadLogs() {
+            const data = await api('/api/logs?limit=100');
+            const container = document.getElementById('logs-container');
+            const empty = document.getElementById('logs-empty');
+            const logs = data.logs || [];
+
+            if (logs.length === 0) {
+                container.innerHTML = '';
+                empty.style.display = 'block';
+                return;
+            }
+            empty.style.display = 'none';
+
+            container.innerHTML = logs.map(log => {
+                const color = {
+                    'ERROR': '#ef5350',
+                    'WARNING': '#ff9800',
+                    'INFO': '#66bb6a',
+                    'DEBUG': '#888',
+                }[log.level] || '#e0e0e0';
+                return `<div style="padding: 2px 0; border-bottom: 1px solid #0f3460;">
+                    <span style="color:#888;">${log.timestamp || ''}</span>
+                    <span style="color:${color}; font-weight:600;">[${log.level}]</span>
+                    <span style="color:#4fc3f7;">${log.module}</span>:
+                    <span>${log.message}</span>
+                </div>`;
+            }).join('');
+
+            // Auto-scroll to bottom
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // --- Init & auto-refresh ---
+        loadLive();
+        setInterval(loadLive, 10000);
+        setInterval(() => {
+            if (document.getElementById('section-logs').classList.contains('active')) loadLogs();
+        }, 5000);
+    </script>
+</body>
+</html>
