@@ -1040,13 +1040,15 @@
         }
 
         async function saveServer() {
+            const host = document.getElementById('srv-host').value;
+            const name = document.getElementById('srv-name').value || host;
             const payload = {
-                name: document.getElementById('srv-name').value,
-                host: document.getElementById('srv-host').value,
-                port: parseInt(document.getElementById('srv-port').value),
-                log_source: document.getElementById('srv-log').value,
+                name: name,
+                host: host,
+                port: parseInt(document.getElementById('srv-port').value) || 8888,
+                log_source: document.getElementById('srv-log').value || 'api',
             };
-            if (!payload.name || !payload.host) { alert('Name and host are required'); return; }
+            if (!payload.host) { alert('Host is required'); return; }
             const user = document.getElementById('srv-user').value;
             const pass = document.getElementById('srv-pass').value;
             if (user) payload.username = user;
